@@ -1,0 +1,188 @@
+---
+title: "Dissertation Defence"
+subtitle: "A novel method for model selection for Bayesian Diagnostic Classification Modeling"
+author: "Jihong Zhang" 
+date: 2022-10-12
+title-block-banner: true
+title-block-banner-color: "red"
+format: 
+  revealjs:
+    page-layout: custom
+    multiplex: true
+    logo: images/uiowa.png
+    preview-links: auto
+    footer: "Thesis Defence 2022"
+    theme: [white, pp.scss]
+    slide-number: c/t
+    incremental: true
+server: shiny
+editor: source
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## Objectives
+
+<div>
+
+1.  Background
+
+    ::: nonincremental
+    -   Previous lit. about Bayesian model selection for DCM
+    -   Research questions
+    :::
+
+2.  Proposed method
+
+    ::: nonincremental
+    -   Limited-information indices
+    -   posterior predictive model checks
+    -   KS test
+    :::
+
+3.  Simulation study
+
+4.  Empirical study
+
+</div>
+
+# Intro {#background background-color="#69BEDB" style="color: black;"}
+
+::: nonincremental
+-   Purpose: Model selection in Bayesian DCM
+
+-   Research Questions
+:::
+
+## Model Selection is important because...
+
+::: nonincremental
+-   multiple alternative models existed
+
+-   simple model vs. complex model
+
+-   dimensionality
+
+-   q-matrix misspecification
+:::
+
+## Previous Model Selection Methods
+
+## Model selection is affected by
+
+-   Sample size
+
+<!-- In fully Bayesian framework, the posterior inference is a comprimise between prior information and data. When sample size is small, the posterior information is controlled by prior information which diminish the difference of models. -->
+
+-   Discrimination information
+
+-   Q-matrix
+
+-   Model structure
+
+## Compare BayesNet to DCM
+
+# Proposed Method
+
+## KS Statistics: Simulation
+
+```{r}
+#| panel: sidebar
+library(shiny)
+sliderInput("mu1", "Mean of reference distribution:", 
+            min = 0, max = 5, value = 0, step = 0.1)
+sliderInput("mu2", "Mean of target distribution:", 
+            min = 0, max = 5, value = 3, step = 0.1)
+actionButton("addModel", "Add another model")
+```
+
+```{r}
+#| panel: fill
+htmlOutput("kstext")
+plotOutput("distPlot")
+```
+
+```{r}
+#| context: server
+library(tidyverse)
+library(ggrepel)
+set.seed(1234)
+dat1 <- reactive({rnorm(1000, mean = input$mu1, sd = 1)})
+dat2 <- reactive({rnorm(1000, mean = input$mu2, sd = 1)})
+
+observeEvent(input$addModel, {
+  insertUI(
+    immediate = TRUE,
+    selector = "#addModel",
+    where = "afterEnd",
+    ui = sliderInput( inputId = "mu3", "Mean of alternative distribution:",
+                      min = 0, max = 5, value = 4, step = 0.1 )
+  )
+})  
+
+observe({
+  dat <- data.frame(dat1 = dat1(), dat2 = dat2()) |> 
+    tidyr::pivot_longer(everything(),names_to = "dist", values_to = "value") 
+  distText <- data.frame(
+    label = c("reference\nmodel", "target\nmodel"),
+    x = c(input$mu1, input$mu2),
+    y = c(0.2, 0.25)
+  )
+  output$distPlot <- renderPlot({
+    dat |> 
+      ggplot() +
+      geom_density(aes(x = value, fill = dist), alpha = 0.6) +
+      geom_text(aes(x = x, y = y, label = label), data = distText, size = 5) +
+      scale_fill_manual(values = c("#E69F00", "#56B4E9"))
+  })
+  
+  output$kstext <- renderUI({
+    txt <- capture.output(ks.test(dat1(), dat2()))
+    txt[4] <- "data:  data1 and data2"
+    txt[5] <- paste0("Target Model:<b>", txt[5], "</b>")
+    HTML(paste0("<font size='3'>",txt, "</font>",collapse = "<br>"))
+  })
+
+  # add another model
+  observeEvent(input$mu3, {
+    set.seed(1234)
+    dat3 <- reactive({rnorm(1000, mean = input$mu3, sd = 1)})
+    
+    dat <- data.frame(dat1 = dat1(), dat2 = dat2(), dat3 = dat3()) |>
+      tidyr::pivot_longer(everything(),names_to = "dist", values_to = "value")
+    
+    distText <- data.frame(
+      label = c("reference\nmodel", "target\nmodel", "alternative\nmodel"),
+      x = c(input$mu1, input$mu2, input$mu3),
+      y = c(0.2, 0.25, 0.3)
+    )
+    
+    output$distPlot <- renderPlot({
+      dat |>
+        ggplot() +
+        geom_density(aes(x = value, fill = dist), alpha = 0.6) +
+        geom_text(aes(x = x, y = y, label = label), data = distText, size = 5) +
+        scale_fill_manual(values = c("#E69F00", "#56B4E9", "firebrick"))
+    })
+  
+    output$kstext <- renderUI({
+      txt <- capture.output(ks.test(dat1(), dat2()))
+      txt[4] <- "data:  data1, data2 and data3"
+      txt[5] <- paste0("Target Model:<b>", txt[5], "</b>")
+      Model2 <- paste0("Alternative Model:<b>",capture.output(ks.test(dat1(), dat3()))[5], "</b>")
+      HTML(paste0("<font size='3'>", c(txt[1:5], Model2, txt[6:7]), "</font>", collapse = "<br>"))
+    })
+  })
+
+
+})
+
+
+```
+
+## Target:
+
+- What is the reference model?
+
+- How to calculate the "distribution" for each model?

@@ -30,7 +30,7 @@ $headingFontWeight: normal;
 $heading1TextShadow: $headingTextShadow;
 
 $heading1Size: 3.00em;
-$heading2Size: 2.11em;
+$heading2Size: 1.88em;
 $heading3Size: 1.55em;
 $heading4Size: 1.00em;
 
@@ -53,6 +53,7 @@ $selectionColor: #fff;
 //  color: white;
 //}
 
+
 #title-slide {
   top: 0 !important;
 }
@@ -60,3 +61,4 @@ $selectionColor: #fff;
 #title-slide > .author:first-of-type {
   margin-top: 320px;
 }
+
